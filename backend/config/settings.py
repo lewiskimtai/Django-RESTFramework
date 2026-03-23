@@ -106,10 +106,16 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# ====================== DATABASE (PostgreSQL) ======================
+# Change to MySQL if you want: ENGINE = 'django.db.backends.mysql'
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'auth_app_db',      # Create this database in pgAdmin/Postgres
+        'USER': 'postgres',
+        'PASSWORD': 123456,  # Change this
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
