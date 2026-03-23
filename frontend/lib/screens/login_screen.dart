@@ -1,21 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // for debugPrint
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-// Replace this with your actual API service
+// ────────────────────────────────────────────────
+// ApiService with real HTTP login implementation
+// ────────────────────────────────────────────────
 class ApiService {
-  static Future<void> login(String username, String password) async {
-    // Simulate API call (replace with real HTTP request)
-    await Future.delayed(const Duration(seconds: 1));
+  static const String baseUrl =
+      'http://10.0.2.2:8000'; // Android emulator → localhost
 
-    // Example: throw error for wrong credentials
-    if (username != "test" || password != "123456") {
-      throw Exception("Invalid username or password");
+  static Future<Map<String, dynamic>> login({
+    required String username,
+    required String password,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/auth/login/');
+      debugPrint('→ POST login to: $uri');
+
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username.trim(), 'password': password}),
+      );
+
+      debugPrint('← Status: ${response.statusCode}');
+      debugPrint('← Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // TODO: save tokens securely (flutter_secure_storage recommended)
+        // Example: await storage.write(key: 'access_token', value: data['access']);
+        return data; // expected: {'access': '...', 'refresh': '...'}
+      } else {
+        throw Exception(
+          'Login failed: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e, stack) {
+      debugPrint('Login HTTP error: $e');
+      debugPrint('Stack: $stack');
+      rethrow;
     }
-
-    // Success: in real app → save token, etc.
-    debugPrint("Login successful for $username");
   }
 }
 
+// ────────────────────────────────────────────────
+// Login Screen
+// ────────────────────────────────────────────────
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -44,30 +76,42 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await ApiService.login(
-        _usernameController.text.trim(),
-        _passwordController.text,
+      final responseData = await ApiService.login(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text,
       );
 
       if (!mounted) return;
 
+      // Success → navigate to home
       Navigator.pushReplacementNamed(context, '/home');
 
-      // Optional: show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Login successful!"),
           backgroundColor: Colors.green,
         ),
       );
+
+      // Optional: log tokens (remove in production)
+      debugPrint("Tokens received: $responseData");
     } catch (e) {
       if (!mounted) return;
 
+      String errorMsg = e.toString().replaceFirst('Exception: ', '').trim();
+
+      // Make error message more user-friendly
+      if (errorMsg.contains('401') ||
+          errorMsg.contains('Invalid credentials') ||
+          errorMsg.contains('Invalid username or password')) {
+        errorMsg = "Invalid username or password";
+      } else if (errorMsg.contains('Connection') ||
+          errorMsg.contains('Socket')) {
+        errorMsg = "Cannot connect to server. Please try again later.";
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
@@ -88,19 +132,21 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Logo or App Name
+                // Logo / Icon
                 const Icon(
                   Icons.lock_outline_rounded,
                   size: 80,
                   color: Colors.blue,
                 ),
                 const SizedBox(height: 16),
+
                 const Text(
                   "Welcome Back",
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
+
                 Text(
                   "Sign in to continue",
                   textAlign: TextAlign.center,
@@ -109,11 +155,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 48),
 
-                // Username / Email field
+                // Username field
                 TextFormField(
                   controller: _usernameController,
                   decoration: InputDecoration(
-                    labelText: 'Username or Email',
+                    labelText: 'Username',
                     prefixIcon: const Icon(Icons.person),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -166,12 +212,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 12),
 
-                // Forgot password (optional)
+                // Forgot password link (optional)
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // TODO: Navigate to forgot password screen
+                      // TODO: Forgot password screen
                     },
                     child: const Text("Forgot password?"),
                   ),
@@ -202,14 +248,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 24),
 
-                // Sign up link (optional)
+                // Sign up link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("Don't have an account? "),
                     TextButton(
                       onPressed: () {
-                        // Navigator.pushNamed(context, '/register');
+                        Navigator.pushNamed(context, '/register');
                       },
                       child: const Text("Sign Up"),
                     ),

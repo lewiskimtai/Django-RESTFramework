@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 // Replace this with your real API service
 class ApiService {
@@ -19,9 +22,9 @@ class ApiService {
 
     // In real app → send POST request to your Django backend
     // Example using http package:
-    /*
+  
     final response = await http.post(
-      Uri.parse('http://your-api.com/auth/register/'),
+      Uri.parse('http://10.0.2.2:8000/api/auth/register/'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'username': username,
@@ -32,7 +35,7 @@ class ApiService {
     if (response.statusCode != 201) {
       throw Exception('Registration failed: ${response.body}');
     }
-    */
+  
 
     debugPrint("Registration successful for $username");
   }
